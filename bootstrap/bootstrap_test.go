@@ -27,7 +27,3 @@ func TestInit(t *testing.T) {
 		t.Error("Error Not Caught When Deinit")
 	}
 }
-
-func TestDeinit(t *testing.T) {
-
-}
