@@ -1,0 +1,19 @@
+graph(%1 : Float(1, 3, 32, 32)
+      %2 : Float(6, 3, 5, 5)
+      %3 : Float(6)
+      %4 : Float(120, 1176)
+      %5 : Float(120)
+      %6 : Float(10, 120)
+      %7 : Float(10)) {
+  %9 : UNKNOWN_TYPE = Conv[kernel_shape=[5, 5], strides=[1, 1], pads=[0, 0, 0, 0], dilations=[1, 1], group=1](%1, %2), uses = [[%10.i0]];
+  %10 : Float(1, 6, 28, 28) = Add[broadcast=1, axis=1](%9, %3), uses = [%11.i0];
+  %11 : Float(1, 6, 28, 28) = Relu(%10), uses = [%12.i0];
+  %12 : Float(1, 6, 14, 14) = MaxPool[dilations=[1, 1], kernel_shape=[2, 2], pads=[0, 0], strides=[2, 2]](%11), uses = [%13.i0];
+  %13 : Float(1, 1176) = Reshape[shape=[1, -1]](%12), uses = [%16.i0];
+  %14 : Float(1176!, 120!) = Transpose[perm=[1, 0]](%4), uses = [%16.i1];
+  %16 : Float(1, 120) = Gemm[alpha=1, beta=1, broadcast=1](%13, %14, %5), uses = [%17.i0];
+  %17 : Float(1, 120) = Relu(%16), uses = [%20.i0];
+  %18 : Float(120!, 10!) = Transpose[perm=[1, 0]](%6), uses = [%20.i1];
+  %20 : Float(1, 10) = Gemm[alpha=1, beta=1, broadcast=1](%17, %18, %7), uses = [%0.i0];
+  return (%20);
+}

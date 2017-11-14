@@ -3,10 +3,12 @@ import os
 from contextlib import redirect_stdout, redirect_stderr
 import torch.onnx
 import json
+import signal
 
 GRAPH_FD = 3
 PARAM_FD = 4
 STATE_DICT_FD = 5
+INTERACT_FD = 6
 
 def numb_graph(model, dummy_input):
     mode = os.getenv("NUMB_MODE")
@@ -32,3 +34,12 @@ def numb_state_dict(state_dict):
         return
     writer_pipe = os.fdopen(STATE_DICT_FD, 'wb') # write-end of the pipe
     torch.save(state_dict, writer_pipe)
+
+def numb_test():
+    mode = os.getenv("NUMB_MODE")
+    if mode != "TEST":
+        print("NO OP!")
+        return
+    reader_pipe = os.fdopen(INTERACT_FD, "r")
+    os.kill(os.getppid(), signal.SIGUSR1)
+    print(reader_pipe.read())

@@ -1,23 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/user/numb/run"
 
 	"github.com/user/numb/bootstrap"
 )
-
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func printUsage() {
 	fmt.Println("Wrong Usage")
@@ -47,12 +38,7 @@ func main() {
 	case "deinit":
 		bootstrap.Deinit()
 	default:
-		raw, err := ioutil.ReadFile("nmb.json")
-		check(err)
-
-		var nmbConfig bootstrap.NmbConfig
-		err = json.Unmarshal(raw, &nmbConfig)
-		check(err)
+		nmbConfig := bootstrap.GetConfig()
 
 		switch subcmd {
 		case "test":
