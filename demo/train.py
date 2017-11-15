@@ -48,4 +48,3 @@ for epk in range(epoch):
 
 # print(model.state_dict())
 print("Done Training!")
-numb_state_dict(model.state_dict)

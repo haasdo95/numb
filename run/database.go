@@ -2,6 +2,8 @@
 package run
 
 import (
+	"time"
+
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -12,6 +14,7 @@ type Schema struct {
 	StateDictFilename string
 	Params            map[string]interface{}
 	Test              TestInfo
+	Timestamp         time.Time
 }
 
 type TestInfo struct {

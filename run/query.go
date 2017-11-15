@@ -6,7 +6,7 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-func GetCollection() *mgo.Collection {
+func GetCollection() (*mgo.Collection, *mgo.Session) {
 	session, err := mgo.Dial("127.0.0.1")
 	utils.Check(err)
 	session.SetMode(mgo.Monotonic, true)
@@ -20,6 +20,7 @@ func GetCollection() *mgo.Collection {
 			"StateDictFilename",
 			"Params",
 			"Test",
+			"Timestamp",
 		},
 		Unique:     true,
 		DropDups:   true,
@@ -28,5 +29,5 @@ func GetCollection() *mgo.Collection {
 	}
 	utils.Check(collection.EnsureIndex(index))
 
-	return collection
+	return collection, session
 }
