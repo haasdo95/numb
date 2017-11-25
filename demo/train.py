@@ -15,9 +15,6 @@ dummy_inputs = Variable(torch.ones((1000, 3, 32, 32)))
 dummy_input = torch.unsqueeze(dummy_inputs[0], dim=0)
 dummy_targets = Variable(torch.rand((1000, 10)))
 
-# Register Net!
-numb_graph(model, dummy_input)
-
 # set parameters!
 learning_rate = 0.001
 epoch = 10

@@ -12,8 +12,8 @@ type Schema struct {
 	AbstractGraph     string
 	ConcreteGraph     string
 	StateDictFilename string
-	Params            map[string]interface{}
-	Test              TestInfo
+	Params            string
+	Test              *TestInfo
 	Timestamp         time.Time
 }
 

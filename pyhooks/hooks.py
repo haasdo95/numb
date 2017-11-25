@@ -6,6 +6,7 @@ import torch.onnx
 import json
 import signal
 import atexit
+import sys
 
 GRAPH_FD = 3
 PARAM_FD = 4
@@ -40,16 +41,23 @@ def numb_state_dict(model: nn.Module):
 
 def numb_test(model: nn.Module):
     """
-    this one will block
+    this one will block and wait for StateDictFileName
     :return:
     """
     mode = os.getenv("NUMB_MODE")
     if mode != "TEST":
         print("NO OP FOR TEST!")
         return
-    reader_pipe = os.fdopen(INTERACT_FD, "r")
+    def handle_usr2(): # exit on sigusr2
+        print("SHUTTING DOWN")
+        sys.exit(1);
+    signal.signal(signal.SIGUSR2, handle_usr2)
+    reader_pipe = os.fdopen(INTERACT_FD, "r") # wait for user choice of state dict
     os.kill(os.getppid(), signal.SIGUSR1)
-    print(reader_pipe.read())
+    state_dict_filename = reader_pipe.read()
+    print("State Dict Filename: ", state_dict_filename)
+    with open(state_dict_filename, "rb") as sdf: # read in state dict and load
+        model.load_state_dict(sdf)
 
 
 def numb_model(dummy_input):

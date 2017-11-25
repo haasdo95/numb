@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -39,8 +40,43 @@ func Test(cmdline string, runconfig map[string]interface{}) {
 }
 
 func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader *os.File, collection *mgo.Collection) {
-	utils.Check(cmd.Wait())
+	// retrieve compgraph & params
+	var concreteGraph string
+	var paramJSON string
+	paramGraphDone := make(chan int)
 
+	var readFrom = func(reader *os.File, payload *string) {
+		buf := bytes.NewBuffer(nil)
+		_, err := io.Copy(buf, reader)
+		utils.Check(err)
+		*payload = string(buf.Bytes())
+		paramGraphDone <- 0
+	}
+	go readFrom(graphReader, &concreteGraph) // receive comp graph
+	go readFrom(paramReader, &paramJSON)     // receive parameters
+	<-paramGraphDone
+	<-paramGraphDone // wait for both to be done
+
+	_, abstractGraph := utils.Concrete2Abstract(concreteGraph)
+
+	// retrieve state dict
+	currTime := time.Now()
+	stateDictFile, err := os.Create(currTime.String())
+	utils.Check(err)
+	io.Copy(stateDictReader, stateDictFile) // dump the statedict
+
+	// save it in database
+	var newEntry Schema
+	newEntry.AbstractGraph = abstractGraph
+	newEntry.ConcreteGraph = concreteGraph
+	newEntry.Params = paramJSON
+	newEntry.StateDictFilename = currTime.String()
+	newEntry.Test = nil
+	newEntry.Timestamp = currTime
+	err = collection.Insert(&newEntry)
+	utils.Check(err)
+
+	utils.Check(cmd.Wait())
 }
 
 func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, collection *mgo.Collection) {
@@ -55,7 +91,7 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, collection *mg
 	concreteGraph := string(buf.Bytes())
 	query := collection.Find(bson.M{"ConcreteGraph": concreteGraph}).Sort("-Timestamp")
 	if cnt, _ := query.Count(); cnt == 0 {
-		cmd.Process.Signal(os.Interrupt)
+		cmd.Process.Signal(syscall.SIGUSR2)
 		fmt.Println("The model you are testing doesn't even exist")
 		return
 	}
@@ -150,29 +186,3 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 	}
 
 }
-
-// if !isTrain { // block for user to input stuff
-// 	<-sigDone
-// }
-
-// pGraphW.Close() // keep it otherwise io.Copy will block indefinitely
-// pParamW.Close()
-// pStateW.Close()
-
-// fmt.Println("Printing: Graph")
-// buf := bytes.NewBuffer(nil)
-// _, err = io.Copy(buf, pGraphR)
-// utils.Check(err)
-// fmt.Println(string(buf.Bytes()))
-
-// fmt.Println("Printing: Param")
-// buf = bytes.NewBuffer(nil)
-// _, err = io.Copy(buf, pParamR)
-// utils.Check(err)
-// fmt.Println(string(buf.Bytes()))
-
-// fmt.Println("Printing: State Dict")
-// buf = bytes.NewBuffer(nil)
-// size, err := io.Copy(buf, pStateR)
-// utils.Check(err)
-// fmt.Println("NUMBER OF BYTES RECEIVED AS STATE DICT: ", size)
