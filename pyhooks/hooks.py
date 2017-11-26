@@ -15,7 +15,7 @@ INTERACT_FD = 6
 
 def numb_graph(model, dummy_input):
     mode = os.getenv("NUMB_MODE")
-    if mode == None:  # a nop!
+    if mode is None:  # a nop!
         print("NO OP FOR GRAPH!")
         return
     writer_pipe = os.fdopen(GRAPH_FD, 'w') # write-end of the pipe
@@ -30,6 +30,7 @@ def numb_param(params):
         return
     writer_pipe = os.fdopen(PARAM_FD, 'w') # write-end of the pipe
     writer_pipe.write(json.dumps(params))
+    writer_pipe.close()
 
 def numb_state_dict(model: nn.Module):
     mode = os.getenv("NUMB_MODE")
@@ -38,6 +39,7 @@ def numb_state_dict(model: nn.Module):
         return
     writer_pipe = os.fdopen(STATE_DICT_FD, 'wb') # write-end of the pipe
     torch.save(model.state_dict(), writer_pipe)
+    writer_pipe.close()
 
 def numb_test(model: nn.Module):
     """
@@ -48,16 +50,17 @@ def numb_test(model: nn.Module):
     if mode != "TEST":
         print("NO OP FOR TEST!")
         return
-    def handle_usr2(): # exit on sigusr2
+    def handle_usr2(*args, **kwargs): # exit on sigusr2
         print("SHUTTING DOWN")
-        sys.exit(1);
+        sys.exit(1)
     signal.signal(signal.SIGUSR2, handle_usr2)
     reader_pipe = os.fdopen(INTERACT_FD, "r") # wait for user choice of state dict
     os.kill(os.getppid(), signal.SIGUSR1)
     state_dict_filename = reader_pipe.read()
     print("State Dict Filename: ", state_dict_filename)
     with open(state_dict_filename, "rb") as sdf: # read in state dict and load
-        model.load_state_dict(sdf)
+        sd = torch.load(sdf)
+        model.load_state_dict(sd)
 
 
 def numb_model(dummy_input):
@@ -66,6 +69,6 @@ def numb_model(dummy_input):
             initfunc(*args, **kwargs)
             numb_graph(args[0], dummy_input)
             numb_test(args[0])
-            atexit.register(numb_state_dict, [args[0]])
+            atexit.register(numb_state_dict, args[0])
         return wrapped
     return actual_decorator
