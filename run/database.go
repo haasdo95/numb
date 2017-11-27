@@ -4,18 +4,10 @@ package run
 import (
 	"time"
 
+	"github.com/libgit2/git2go"
+
 	"gopkg.in/mgo.v2/bson"
 )
-
-// type Schema struct {
-// 	ID                bson.ObjectId `bson:"_id,omitempty"`
-// 	AbstractGraph     string
-// 	ConcreteGraph     string
-// 	StateDictFilename string
-// 	Params            string
-// 	Test              *TestInfo
-// 	Timestamp         time.Time
-// }
 
 type Schema struct {
 	ID                bson.ObjectId `bson:"_id,omitempty"`
@@ -25,6 +17,7 @@ type Schema struct {
 	Params            string        `json:"params" bson:"params"`
 	Test              *TestInfo     `json:"test" bson:"test"`
 	Timestamp         time.Time     `json:"timestamp" bson:"timestamp"`
+	Versioning        *git.Oid      `json:"versioning" bson:"versioning"`
 }
 
 type TestInfo struct {

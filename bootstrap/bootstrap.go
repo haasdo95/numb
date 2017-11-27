@@ -8,6 +8,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/libgit2/git2go"
+	"github.com/user/numb/versioning"
+
 	"github.com/user/numb/utils"
 )
 
@@ -94,7 +97,7 @@ func Deinit() (error, error) {
 	return errdir, errjson
 }
 
-// Init serves to remove both .nmb and nmb.json
+// Init serves to add both .nmb and nmb.json
 func Init() (error, error) {
 	errdir := createNmbDir()
 	if errdir != nil {
@@ -104,5 +107,9 @@ func Init() (error, error) {
 	if errjson != nil {
 		fmt.Println(errjson.Error())
 	}
+	// create numb branch
+	repo, err := git.OpenRepository(".git")
+	utils.Check(err)
+	versioning.CreateBranch(repo, "numb")
 	return errdir, errjson
 }
