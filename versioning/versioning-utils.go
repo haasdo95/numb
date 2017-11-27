@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os/exec"
 	"time"
 
 	"github.com/user/numb/utils"
@@ -59,6 +60,8 @@ func addAllAndCommitOnNumb(repo *git.Repository, commitMessage string) (*git.Oid
 	idx, err := repo.Index()
 	utils.Check(err)
 	hasConflict := idx.HasConflicts()
+	idx, err = repo.Index()
+	utils.Check(err)
 	err = idx.AddAll([]string{}, git.IndexAddDefault, nil)
 	utils.Check(err)
 	treeID, err := idx.WriteTree()
@@ -68,7 +71,6 @@ func addAllAndCommitOnNumb(repo *git.Repository, commitMessage string) (*git.Oid
 	err = idx.Write()
 	utils.Check(err)
 
-	utils.Check(err)
 	headID := head.Target()
 	headCommit, err := repo.LookupCommit(headID)
 	utils.Check(err)
@@ -80,6 +82,30 @@ func addAllAndCommitOnNumb(repo *git.Repository, commitMessage string) (*git.Oid
 	commitID, err := repo.CreateCommit("refs/heads/numb", defaultSignature, numbSignature, commitMessage, tree, headCommit)
 	utils.Check(err)
 	return commitID, hasConflict, nil
+}
+
+func makeCommitToNumb(commitMessage string) *git.Oid {
+	repo, err := git.OpenRepository(".git")
+	utils.Check(err)
+	idx, err := repo.Index()
+	utils.Check(err)
+	treeID, err := idx.WriteTree()
+	utils.Check(err)
+	tree, err := repo.LookupTree(treeID)
+	utils.Check(err)
+
+	head, _ := repo.Head()
+	headID := head.Target()
+	headCommit, err := repo.LookupCommit(headID)
+	utils.Check(err)
+
+	// commit to head
+	numbSignature := makeNumbSignature()
+	defaultSignature, err := repo.DefaultSignature()
+	utils.Check(err)
+	commitID, err := repo.CreateCommit("refs/heads/numb", defaultSignature, numbSignature, commitMessage, tree, headCommit)
+	utils.Check(err)
+	return commitID
 }
 
 func checkoutBranch(repo *git.Repository, branchName string) error {
@@ -109,6 +135,26 @@ func checkoutBranch(repo *git.Repository, branchName string) error {
 	return nil
 }
 
+func logConflict() {
+	fmt.Println("Conflict(s) occurred on numb branch")
+	fmt.Println("checkout to numb branch and fix conflict before doing anything else")
+	fmt.Println("Most times, simply keep hitting 'accept incoming changes' is a safe bet")
+}
+
+func mergeIntoNumb(repo *git.Repository, headCommit *git.Commit) {
+	numbBranch, err := repo.LookupBranch("numb", git.BranchLocal)
+	utils.Check(err)
+	numbHeadID := numbBranch.Target()
+	numbHead, err := repo.LookupCommit(numbHeadID)
+	utils.Check(err)
+	mergeOpt, _ := git.DefaultMergeOptions()
+	mergeOpt.FileFavor = git.MergeFileFavorOurs
+	idx, err := repo.MergeCommits(headCommit, numbHead, &mergeOpt)
+	if idx.HasConflicts() {
+		logConflict()
+	}
+}
+
 // FlashCommit does the following:
 // 1. stash uncommited changes on current branch. remember current branch.
 // 2. checkout numb branch, APPLY the stashed
@@ -126,35 +172,46 @@ func FlashCommit(repo *git.Repository) (*git.Oid, error) {
 	utils.Check(err)
 	// stash stuff
 	stasher := makeNumbSignature()
-	repo.Stashes.Save(stasher, "Stashing the Uncommitted on Working Branch", git.StashIncludeUntracked)
+	stashID, err := repo.Stashes.Save(stasher, "Stashing the Uncommitted on Working Branch", git.StashIncludeUntracked)
+	if stashID == nil || err != nil {
+		println("Nothing Stashed!")
+		checkoutCmd := exec.Command("git", "checkout", "numb")
+		checkoutCmd.Run()
+		mergeCmd := exec.Command("git", "merge", "-X", "theirs", oldBranchName)
+		mergeCmd.Run()
+
+		addAllCmd := exec.Command("git", "add", "-A")
+		addAllCmd.Run()
+		commit := makeCommitToNumb("Trained at " + time.Now().String())
+		checkoutBackCmd := exec.Command("git", "checkout", oldBranchName)
+		checkoutBackCmd.Run()
+		return commit, nil
+	}
 
 	// 2
 	// checkout to numb
-	err = checkoutBranch(repo, "numb")
-	utils.Check(err)
+	checkoutCmd := exec.Command("git", "checkout", "numb")
+	checkoutCmd.Run()
 	// apply the stashed
-	defaultStashOptions, err := git.DefaultStashApplyOptions()
-	utils.Check(err)
-	err = repo.Stashes.Apply(0, defaultStashOptions)
-	utils.Check(err)
-
+	stashAppCmd := exec.Command("git", "stash", "apply")
+	stashAppCmd.Run()
 	// 3
 	// resolve conflicts
-	// TODO: Haven't figured out the safe way to resolve conflicts.
-	// For now I'll just yell at the user to manually fix them
-	// add -A & commit
-	commit, hasConflict, err := addAllAndCommitOnNumb(repo, "Trained at "+time.Now().String())
-	utils.Check(err)
+	println("Trying to resovle conflicts")
+	resolveCmd := exec.Command("bash", "-c", "grep -lr '<<<<<<<' . | xargs git checkout --theirs")
+	resolveCmd.Run()
 
-	if hasConflict {
-		fmt.Println("Conflict(s) occurred on numb branch")
-		fmt.Println("checkout to numb branch and fix conflict before doing anything else")
-		fmt.Println("Most times, simply keep hitting 'accept incoming changes' is a safe bet")
-	}
+	addAllCmd := exec.Command("git", "add", "-A")
+	addAllCmd.Run()
+	commit := makeCommitToNumb("Trained at " + time.Now().String())
 
-	// flash back
-	err = checkoutBranch(repo, oldBranchName)
-	utils.Check(err)
-	err = repo.Stashes.Pop(0, defaultStashOptions)
+	println("Commit Made: ", commit.String())
+
+	checkoutBackCmd := exec.Command("git", "checkout", oldBranchName)
+	checkoutBackCmd.Run()
+
+	stashPopCmd := exec.Command("git", "stash", "pop")
+	stashPopCmd.Run()
+
 	return commit, nil
 }
