@@ -45,12 +45,6 @@ func Test(cmdline string, runconfig map[string]interface{}) {
 }
 
 func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader *os.File, collection *mgo.Collection) {
-	// make commit on numb branch
-	repo, err := git.OpenRepository(".git")
-	utils.Check(err)
-	defer repo.Free()
-	oid, err := versioning.FlashCommit(repo)
-	utils.Check(err)
 
 	// retrieve compgraph & params
 	var concreteGraph string
@@ -97,11 +91,18 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader *os.File,
 	newEntry.StateDictFilename = currTime.String()
 	newEntry.Test = nil
 	newEntry.Timestamp = currTime
+
+	utils.Check(cmd.Wait())
+
+	// make commit on numb branch
+	repo, err := git.OpenRepository(".git")
+	utils.Check(err)
+	defer repo.Free()
+	oid, err := versioning.FlashCommit(repo)
+	utils.Check(err)
 	newEntry.Versioning = oid
 	err = collection.Insert(&newEntry)
 	utils.Check(err)
-
-	utils.Check(cmd.Wait())
 }
 
 func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, collection *mgo.Collection, sigs chan int) {
