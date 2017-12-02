@@ -7,17 +7,21 @@ import json
 import signal
 import atexit
 import sys
+import inspect
 
 GRAPH_FD = 3
 PARAM_FD = 4
 STATE_DICT_FD = 5
 INTERACT_FD = 6
+CODE_FD = 7
+
+def numb_code_snapshot(model: nn.Module):
+    cls_src = inspect.getsource(model.__class__)
+    writer_pipe = os.fdopen(CODE_FD, "w") # write-end of the pipe
+    writer_pipe.write(cls_src)
+    writer_pipe.close()
 
 def numb_graph(model, dummy_input):
-    mode = os.getenv("NUMB_MODE")
-    if mode is None:  # a nop!
-        print("NO OP FOR GRAPH!")
-        return
     writer_pipe = os.fdopen(GRAPH_FD, 'w') # write-end of the pipe
     with redirect_stdout(writer_pipe):
         torch.onnx.export(model, dummy_input, ".nmb/.tmp", verbose=True)
@@ -67,8 +71,13 @@ def numb_model(dummy_input):
     def actual_decorator(initfunc):
         def wrapped(*args, **kwargs):
             initfunc(*args, **kwargs)
-            numb_graph(args[0], dummy_input)
-            numb_test(args[0])
-            atexit.register(numb_state_dict, args[0])
+            mode = os.getenv("NUMB_MODE")
+            if mode == "TRAIN":
+                numb_code_snapshot(args[0])
+                numb_graph(args[0], dummy_input)
+                atexit.register(numb_state_dict, args[0])
+            elif mode == "TEST":
+                numb_graph(args[0], dummy_input)
+                numb_test(args[0])
         return wrapped
     return actual_decorator

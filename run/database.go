@@ -13,6 +13,7 @@ type Schema struct {
 	ID                bson.ObjectId `bson:"_id,omitempty"`
 	AbstractGraph     string        `json:"abstract" bson:"abstract"`
 	ConcreteGraph     string        `json:"concrete" bson:"concrete"`
+	Code              string        `json:"code" bson:"code"`
 	StateDictFilename string        `json:"stateDictFilename" bson:"stateDictFilename"`
 	Params            string        `json:"params" bson:"params"`
 	Test              *TestInfo     `json:"test" bson:"test"`
