@@ -14,6 +14,7 @@ PARAM_FD = 4
 STATE_DICT_FD = 5
 INTERACT_FD = 6
 CODE_FD = 7
+TEST_RESULT_FD = 8
 
 def numb_code_snapshot(model: nn.Module):
     cls_src = inspect.getsource(model.__class__)
@@ -36,6 +37,11 @@ def numb_param(params):
     writer_pipe.write(json.dumps(params))
     writer_pipe.close()
 
+def numb_test_result(test_result: dict):
+    writer_pipe = os.fdopen(TEST_RESULT_FD, "w")
+    writer_pipe.write(json.dumps(test_result))
+    writer_pipe.close()
+
 def numb_state_dict(model: nn.Module):
     mode = os.getenv("NUMB_MODE")
     if mode != "TRAIN":  # nop
@@ -45,7 +51,7 @@ def numb_state_dict(model: nn.Module):
     torch.save(model.state_dict(), writer_pipe)
     writer_pipe.close()
 
-def numb_test(model: nn.Module):
+def numb_test_start(model: nn.Module):
     """
     this one will block and wait for StateDictFileName
     :return:
@@ -78,6 +84,6 @@ def numb_model(dummy_input):
                 atexit.register(numb_state_dict, args[0])
             elif mode == "TEST":
                 numb_graph(args[0], dummy_input)
-                numb_test(args[0])
+                numb_test_start(args[0])
         return wrapped
     return actual_decorator

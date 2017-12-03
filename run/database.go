@@ -4,8 +4,6 @@ package run
 import (
 	"time"
 
-	"github.com/libgit2/git2go"
-
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -16,13 +14,8 @@ type Schema struct {
 	Code              string        `json:"code" bson:"code"`
 	StateDictFilename string        `json:"stateDictFilename" bson:"stateDictFilename"`
 	Params            string        `json:"params" bson:"params"`
-	Test              *TestInfo     `json:"test" bson:"test"`
+	Test              string     `json:"test" bson:"test"`
 	Timestamp         time.Time     `json:"timestamp" bson:"timestamp"`
-	Versioning        *git.Oid      `json:"versioning" bson:"versioning"`
+	Versioning        string      `json:"versioning" bson:"versioning"`
 }
 
-type TestInfo struct {
-	Accuracy float64
-	Extra    map[string]interface{}
-	// TODO: more test records
-}

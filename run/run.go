@@ -20,6 +20,7 @@ import (
 
 	"github.com/user/numb/utils"
 	"github.com/user/numb/versioning"
+	pp "github.com/user/numb/prettyprint"
 )
 
 func check(err error) {
@@ -29,17 +30,17 @@ func check(err error) {
 }
 
 // Train runs a command in train mode.
-func Train(cmdline string, runconfig map[string]interface{}) {
+func Train(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
 	trainEnv := make(map[string]string)
 	trainEnv["NUMB_MODE"] = "TRAIN"
-	run(cmdline, trainEnv, runconfig, true)
+	run(cmdline, trainEnv, runconfig, true, collection)
 }
 
 // Test runs a command in train mode.
-func Test(cmdline string, runconfig map[string]interface{}) {
+func Test(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
 	testEnv := make(map[string]string)
 	testEnv["NUMB_MODE"] = "TEST"
-	run(cmdline, testEnv, runconfig, false)
+	run(cmdline, testEnv, runconfig, false, collection)
 }
 
 func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeReader *os.File, collection *mgo.Collection) {
@@ -91,7 +92,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	newEntry.Code = nnCode
 	newEntry.Params = paramJSON
 	newEntry.StateDictFilename = currTime.String()
-	newEntry.Test = nil
+	newEntry.Test = ""
 	newEntry.Timestamp = currTime
 
 	utils.Check(cmd.Wait())
@@ -99,12 +100,14 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	// make commit on numb branch
 	oid, err := versioning.FlashCommit()
 	utils.Check(err)
-	newEntry.Versioning = oid
+	if oid != nil {
+		newEntry.Versioning = oid.String()
+	}
 	err = collection.Insert(&newEntry)
 	utils.Check(err)
 }
 
-func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, sigs chan int, collection *mgo.Collection) {
+func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.File, sigs chan int, collection *mgo.Collection) {
 	// get comp graph first
 	buf := bytes.NewBuffer(nil)
 	_, err := io.Copy(buf, graphReader)
@@ -134,7 +137,11 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, sigs chan int,
 	fmt.Println()
 
 	for idx, r := range results {
-		fmt.Printf("%d: %v\n", idx, r.Params)
+		fmt.Printf("%d:\n", idx)
+		obj, err := utils.Str2Obj(r.Params)
+		if err == nil {
+			pp.TablePrint(obj)
+		}
 	}
 	fmt.Println()
 
@@ -155,10 +162,23 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter *os.File, sigs chan int,
 	interactWriter.WriteString(savedStatedictFilename) // send the file name to python
 	interactWriter.Close()
 
+	// fill out the received test result, if any
+	buf = bytes.NewBuffer(nil)
+	_, err = io.Copy(buf, testResultReader)
+	utils.Check(err)
+	testResultJSON := buf.String()
+	query = query.Select(bson.M{"params": results[choice].Params})
+	fillOutTestResult := mgo.Change {
+		Update: bson.M{"$set": bson.M{"test": testResultJSON}},
+		ReturnNew: true,
+	}
+	_, err = query.Apply(fillOutTestResult, nil)
+	utils.Check(err)
+
 	utils.Check(cmd.Wait())
 }
 
-func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, isTrain bool) {
+func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, isTrain bool, collection *mgo.Collection) {
 	cmdPath := strings.Split(cmdline, " ")
 	cmd := exec.Command(cmdPath[0], cmdPath[1:]...)
 
@@ -201,6 +221,10 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 	utils.Check(err)
 	defer pCodeR.Close()
 
+	pTestResultR, pTestResultW, err := os.Pipe()
+	utils.Check(err)
+	defer pTestResultR.Close()
+
 	// end: create pipes
 
 	// setting pipes in py script
@@ -211,10 +235,8 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 		pInteractR, // will block python execution;
 		// In python script a signal will be sent to the parent before blocking
 		pCodeW,
+		pTestResultW,
 	}
-
-	collection, session := GetCollection()
-	defer session.Close()
 
 	sigusr1Received := make(chan int)
 	if !isTrain {
@@ -234,9 +256,10 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 	pStateW.Close()
 	pInteractR.Close()
 	pCodeW.Close()
+	pTestResultW.Close()
 
 	if !isTrain {
-		runTest(cmd, pGraphR, pInteractW, sigusr1Received, collection)
+		runTest(cmd, pGraphR, pInteractW, pTestResultR, sigusr1Received, collection)
 	} else {
 		runTrain(cmd, pGraphR, pParamR, pStateR, pCodeR, collection)
 	}

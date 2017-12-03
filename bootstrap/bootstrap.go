@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"os/exec"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,8 +31,8 @@ func createNmbJSON() error {
 	}
 	nmbjson := NmbConfig{
 		Name:  cwd,
-		Train: make([]string, 0),
-		Test:  make([]string, 0),
+		Train: []string{"python train.py"},
+		Test:  []string{"python test.py"},
 	}
 
 	jsonbytes, err := json.MarshalIndent(nmbjson, "", "\t")
@@ -94,6 +95,7 @@ func Deinit() (error, error) {
 	if errjson != nil {
 		fmt.Println(errjson.Error())
 	}
+	exec.Command("git", "branch", "-D", "numb").Run() // remove numb branch.
 	return errdir, errjson
 }
 

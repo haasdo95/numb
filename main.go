@@ -8,6 +8,7 @@ import (
 	"github.com/user/numb/run"
 
 	"github.com/user/numb/bootstrap"
+	"github.com/user/numb/analysis"
 )
 
 func printUsage() {
@@ -39,16 +40,21 @@ func main() {
 		bootstrap.Deinit()
 	default:
 		nmbConfig := bootstrap.GetConfig()
-
+		collection, session := run.GetCollection()
+		defer session.Close()
 		switch subcmd {
 		case "test":
 			for _, cmdline := range nmbConfig.Test {
-				run.Test(cmdline, runconfig)
+				run.Test(cmdline, runconfig, collection)
 			}
 		case "train":
 			for _, cmdline := range nmbConfig.Train {
-				run.Train(cmdline, runconfig)
+				run.Train(cmdline, runconfig, collection)
 			}
+		case "list":
+			analysis.List(collection)
+		default:
+			printUsage()
 		}
 	}
 }
