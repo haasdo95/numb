@@ -1,6 +1,7 @@
 package run
 
 import (
+	"github.com/olekukonko/tablewriter"
 	"bytes"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"gopkg.in/mgo.v2"
 
 	"github.com/user/numb/utils"
+	"github.com/user/numb/database"
 	"github.com/user/numb/versioning"
 	pp "github.com/user/numb/prettyprint"
 )
@@ -86,7 +88,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	io.Copy(stateDictFile, stateDictReader) // dump the statedict
 
 	// save it in database
-	var newEntry Schema
+	var newEntry database.Schema
 	newEntry.AbstractGraph = abstractGraph
 	newEntry.ConcreteGraph = concreteGraph
 	newEntry.Code = nnCode
@@ -98,7 +100,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	utils.Check(cmd.Wait())
 
 	// make commit on numb branch
-	oid, err := versioning.FlashCommit()
+	oid, err := versioning.FlashCommit(paramJSON)
 	utils.Check(err)
 	if oid != nil {
 		newEntry.Versioning = oid.String()
@@ -123,7 +125,7 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	<-sigs // blocks until signal comes
 
 	// retrieve result(s)
-	results := make([]Schema, 0)
+	results := make([]database.Schema, 0)
 	utils.Check(query.All(&results))
 	result := results[0]
 
@@ -139,8 +141,16 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	for idx, r := range results {
 		fmt.Printf("%d:\n", idx)
 		obj, err := utils.Str2Obj(r.Params)
-		if err == nil {
-			pp.TablePrint(obj)
+		if r.Params != "" && err == nil {
+			pp.TablePrint(obj, tablewriter.BgBlueColor).Render()
+		} else {
+			pp.DisplayHyperParamFailure()
+		}
+		obj, err = utils.Str2Obj(r.Test)
+		if r.Test != "" && err == nil {
+			pp.TablePrint(obj, tablewriter.BgYellowColor).Render()
+		} else {
+			pp.DisplayTestFailure()
 		}
 	}
 	fmt.Println()
@@ -167,12 +177,17 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	_, err = io.Copy(buf, testResultReader)
 	utils.Check(err)
 	testResultJSON := buf.String()
-	query = query.Select(bson.M{"params": results[choice].Params})
-	fillOutTestResult := mgo.Change {
-		Update: bson.M{"$set": bson.M{"test": testResultJSON}},
-		ReturnNew: true,
-	}
-	_, err = query.Apply(fillOutTestResult, nil)
+
+	fmt.Println("Received: ", testResultJSON)
+	
+	_, err = collection.UpdateAll(bson.M{
+		"concrete": concreteGraph, 
+		"params": results[choice].Params,
+	}, bson.M {
+		"$set": bson.M{
+			"test": testResultJSON,
+		},
+	})
 	utils.Check(err)
 
 	utils.Check(cmd.Wait())

@@ -6,9 +6,11 @@ import (
 	"os"
 
 	"github.com/user/numb/run"
+	"github.com/user/numb/database"
 
 	"github.com/user/numb/bootstrap"
 	"github.com/user/numb/analysis"
+	"github.com/user/numb/versioning"
 )
 
 func printUsage() {
@@ -40,7 +42,7 @@ func main() {
 		bootstrap.Deinit()
 	default:
 		nmbConfig := bootstrap.GetConfig()
-		collection, session := run.GetCollection()
+		collection, session := database.GetCollection()
 		defer session.Close()
 		switch subcmd {
 		case "test":
@@ -53,6 +55,13 @@ func main() {
 			}
 		case "list":
 			analysis.List(collection)
+		case "revert":
+			// anything trailing
+			if len(args) == 3 {
+				versioning.Revert(collection, args[2])
+			} else if len(args) == 2 { // nothing trailing
+				versioning.Revert(collection, "")
+			}
 		default:
 			printUsage()
 		}

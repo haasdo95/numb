@@ -1,5 +1,5 @@
 // this file defines the database schema
-package run
+package database
 
 import (
 	"time"

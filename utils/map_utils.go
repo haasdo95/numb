@@ -1,18 +1,23 @@
 package utils
 
 import (
+	"sort"
 	"encoding/json"
 )
 
 // MapKeyValue returns (keys, values) of a map
+// keys will always be returned in increasing order
 func MapKeyValue(m map[string]interface{}) ([]string, []interface{}) {
 	keys := make([]string, len(m))
 	values := make([]interface{}, len(m))
 	i := 0
-	for k, v := range m {
+	for k := range m {
 		keys[i] = k
-		values[i] = v
 		i++
+	}
+	sort.Strings(keys)
+	for j := 0; j < i; j++ {
+		values[j] = m[keys[j]]
 	}
 	return keys, values
 }

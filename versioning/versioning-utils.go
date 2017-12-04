@@ -65,7 +65,7 @@ func makeCommitToNumb(commitMessage string) *git.Oid {
 // 1. stash uncommited changes on current branch. remember current branch.
 // 2. checkout numb branch, APPLY the stashed
 // 3. resolve conflicts by always accepting incoming changes; add -A & commit
-func FlashCommit() (*git.Oid, error) {
+func FlashCommit(params string) (*git.Oid, error) {
 	repo, err := git.OpenRepository(".git")
 	utils.Check(err)
 	defer repo.Free()
@@ -124,7 +124,9 @@ func FlashCommit() (*git.Oid, error) {
 
 	addAllCmd := exec.Command("git", "add", "-A")
 	addAllCmd.Run()
-	commit := makeCommitToNumb("Trained at " + time.Now().String())
+	commitMessage := "Trained at " + time.Now().String() + "\n"
+	commitMessage += "With Params: " + params
+	commit := makeCommitToNumb(commitMessage)
 
 	println("Commit Made: ", commit.String())
 

@@ -1,4 +1,4 @@
-package run
+package database
 
 import (
 	"github.com/user/numb/bootstrap"

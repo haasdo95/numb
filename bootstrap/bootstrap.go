@@ -9,9 +9,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/libgit2/git2go"
-	"github.com/user/numb/versioning"
-
 	"github.com/user/numb/utils"
 )
 
@@ -110,8 +107,6 @@ func Init() (error, error) {
 		fmt.Println(errjson.Error())
 	}
 	// create numb branch
-	repo, err := git.OpenRepository(".git")
-	utils.Check(err)
-	versioning.CreateBranch(repo, "numb")
+	exec.Command("git", "branch", "numb").Run()
 	return errdir, errjson
 }
