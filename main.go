@@ -62,6 +62,20 @@ func main() {
 			} else if len(args) == 2 { // nothing trailing
 				versioning.Revert(collection, "")
 			}
+		case "queue":
+			if len(args) == 4 {
+				if args[2] == "init" {
+					run.QueueInit(args[3])
+				} else if args[2] == "run" {
+					for _, cmdline := range nmbConfig.Train {
+						run.QueueRun(cmdline, runconfig, collection, args[3])
+					}
+				} else {
+					printUsage()
+				}
+			} else {
+				printUsage()
+			}
 		default:
 			printUsage()
 		}

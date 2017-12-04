@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -25,27 +24,28 @@ import (
 	pp "github.com/user/numb/prettyprint"
 )
 
-func check(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
+const (
+	TRAIN RunMode = iota
+	TEST
+	QUEUE
+)
+type RunMode int
 
 // Train runs a command in train mode.
 func Train(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
 	trainEnv := make(map[string]string)
 	trainEnv["NUMB_MODE"] = "TRAIN"
-	run(cmdline, trainEnv, runconfig, true, collection)
+	run(cmdline, trainEnv, runconfig, TRAIN, collection, "")
 }
 
 // Test runs a command in train mode.
 func Test(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
 	testEnv := make(map[string]string)
 	testEnv["NUMB_MODE"] = "TEST"
-	run(cmdline, testEnv, runconfig, false, collection)
+	run(cmdline, testEnv, runconfig, TEST, collection, "")
 }
 
-func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeReader *os.File, collection *mgo.Collection) {
+func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeReader *os.File, collection *mgo.Collection, queued bool) {
 
 	// retrieve compgraph & params
 	var concreteGraph string
@@ -68,22 +68,25 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	<-readDone // wait for both to be done
 
 	// search in database for already-trained model
-	alreadyTrainedQuery := collection.Find(bson.M{"concrete": concreteGraph, "params": paramJSON})
-	if cnt, _ := alreadyTrainedQuery.Count(); cnt != 0 {
-		fmt.Println("This architecture has been trained with the same hyper-parameters previously")
-		yes := prompter.YesNo("Are you sure you want to retrain it?", false)
-		if !yes {
-			fmt.Println("SHUTTING DOWN")
-			cmd.Process.Signal(syscall.SIGINT)
-			return
+	// under queued mode, we do not check for dup
+	if !queued {
+		alreadyTrainedQuery := collection.Find(bson.M{"concrete": concreteGraph, "params": paramJSON})
+		if cnt, _ := alreadyTrainedQuery.Count(); cnt != 0 {
+			fmt.Println("This architecture has been trained with the same hyper-parameters previously")
+			yes := prompter.YesNo("Are you sure you want to retrain it?", false)
+			if !yes {
+				fmt.Println("SHUTTING DOWN")
+				cmd.Process.Signal(syscall.SIGINT)
+				return
+			}
 		}
 	}
-
+	
 	_, abstractGraph := utils.Concrete2Abstract(concreteGraph)
 
 	// retrieve state dict
 	currTime := time.Now()
-	stateDictFile, err := os.Create(".nmb/" + currTime.String())
+	stateDictFile, err := os.Create(".nmb/" + string(currTime.UnixNano()))
 	utils.Check(err)
 	io.Copy(stateDictFile, stateDictReader) // dump the statedict
 
@@ -93,18 +96,23 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	newEntry.ConcreteGraph = concreteGraph
 	newEntry.Code = nnCode
 	newEntry.Params = paramJSON
-	newEntry.StateDictFilename = currTime.String()
+	newEntry.StateDictFilename = string(currTime.UnixNano())
 	newEntry.Test = ""
-	newEntry.Timestamp = currTime
+	newEntry.Timestamp = currTime.UnixNano()
+	newEntry.Versioning = ""
 
 	utils.Check(cmd.Wait())
 
-	// make commit on numb branch
-	oid, err := versioning.FlashCommit(paramJSON)
-	utils.Check(err)
-	if oid != nil {
-		newEntry.Versioning = oid.String()
+	// also, versioning is not possible under queued mode
+	if !queued {
+		// make commit on numb branch
+		oid, err := versioning.FlashCommit(paramJSON)
+		utils.Check(err)
+		if oid != nil {
+			newEntry.Versioning = oid.String()
+		}
 	}
+	
 	err = collection.Insert(&newEntry)
 	utils.Check(err)
 }
@@ -193,7 +201,7 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	utils.Check(cmd.Wait())
 }
 
-func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, isTrain bool, collection *mgo.Collection) {
+func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, mode RunMode, collection *mgo.Collection, queueData string) {
 	cmdPath := strings.Split(cmdline, " ")
 	cmd := exec.Command(cmdPath[0], cmdPath[1:]...)
 
@@ -253,8 +261,18 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 		pTestResultW,
 	}
 
+	// append queue-related pipe if needed.
+	var pReceiveParamR *os.File
+	if mode == QUEUE {
+		pReceiveParamR, pReceiveParamW, err := os.Pipe()
+		utils.Check(err)
+		cmd.ExtraFiles = append(cmd.ExtraFiles, pReceiveParamR)
+		pReceiveParamW.WriteString(queueData)
+		pReceiveParamW.Close()
+	}
+
 	sigusr1Received := make(chan int)
-	if !isTrain {
+	if mode == TEST {
 		sigs := make(chan os.Signal)
 		signal.Notify(sigs, syscall.SIGUSR1)
 		go func() {
@@ -272,11 +290,14 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 	pInteractR.Close()
 	pCodeW.Close()
 	pTestResultW.Close()
+	if pReceiveParamR != nil {
+		pReceiveParamR.Close()
+	}
 
-	if !isTrain {
+	if mode == TEST {
 		runTest(cmd, pGraphR, pInteractW, pTestResultR, sigusr1Received, collection)
 	} else {
-		runTrain(cmd, pGraphR, pParamR, pStateR, pCodeR, collection)
+		runTrain(cmd, pGraphR, pParamR, pStateR, pCodeR, collection, mode == QUEUE)
 	}
 
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"sort"
-	"time"
 	"os"
 	"github.com/user/numb/database"
 	"github.com/user/numb/utils"
@@ -30,7 +29,7 @@ type ListModes []ListMode
 type GroupedEntries struct {
 	GroupKey string	`bson:"_id" json:"_id"`
 	Entries []database.Schema `bson:"entries" json:"entries"`
-	MaxTime time.Time `bson:"timestamp" json:"timestamp"`
+	MaxTime int64 `bson:"timestamp" json:"timestamp"`
 }
 
 func (modes ListModes) containMode(mode ListMode) bool {
@@ -75,9 +74,9 @@ func List(collection *mgo.Collection, modes ...ListMode)  {
 	// sort results by max time
 	sort.Slice(results, func (i, j int) bool {
 		if isRev {
-			return results[i].MaxTime.Unix() < results[j].MaxTime.Unix()
+			return results[i].MaxTime < results[j].MaxTime
 		}
-		return results[i].MaxTime.Unix() > results[j].MaxTime.Unix()
+		return results[i].MaxTime > results[j].MaxTime
 	})
 	for _, result := range results {
 		// pretty print code
@@ -88,16 +87,16 @@ func List(collection *mgo.Collection, modes ...ListMode)  {
 		table.SetAutoWrapText(true)
 		table.SetColWidth(shellWidth)
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
-		table.SetHeaderColor([]int{tablewriter.BgGreenColor})
+		table.SetHeaderColor([]int{tablewriter.BgGreenColor, tablewriter.FgBlackColor})
 		table.Render()
 		fmt.Println(code)
 		// sort entries by timestamp
 		entries := result.Entries
 		sort.Slice(entries, func (i, j int) bool {
 			if isRev {
-				return entries[i].Timestamp.Unix() < entries[j].Timestamp.Unix()
+				return entries[i].Timestamp < entries[j].Timestamp
 			}
-			return entries[i].Timestamp.Unix() > entries[j].Timestamp.Unix()
+			return entries[i].Timestamp > entries[j].Timestamp
 		})
 		// iter through schemas(corresponding to different hypermeters used)
 		for _, schema := range entries {

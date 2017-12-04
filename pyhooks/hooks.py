@@ -15,6 +15,31 @@ STATE_DICT_FD = 5
 INTERACT_FD = 6
 CODE_FD = 7
 TEST_RESULT_FD = 8
+RECEIVE_PARAM_FD = 9 # needed for queued training
+
+def numb_queue(namespace):
+    mode = os.getenv("NUMB_MODE")
+    if mode != "QUEUE":  # nop
+        print("NO OP FOR QUEUE!")
+        return
+    reader_pipe = os.fdopen(RECEIVE_PARAM_FD)
+    received_params = reader_pipe.read()
+    writer_pipe = os.fdopen(PARAM_FD, "w")
+    writer_pipe.write(received_params)
+    writer_pipe.close()
+    received_params = json.loads(received_params)
+    for k, v in received_params.items():
+        namespace[k] = v
+    reader_pipe.close()
+
+def numb_param(params):
+    mode = os.getenv("NUMB_MODE")
+    if mode != "TRAIN":  # nop
+        print("NO OP FOR PARAM!")
+        return
+    writer_pipe = os.fdopen(PARAM_FD, 'w') # write-end of the pipe
+    writer_pipe.write(json.dumps(params))
+    writer_pipe.close()
 
 def numb_code_snapshot(model: nn.Module):
     cls_src = inspect.getsource(model.__class__)
@@ -28,25 +53,16 @@ def numb_graph(model, dummy_input):
         torch.onnx.export(model, dummy_input, ".nmb/.tmp", verbose=True)
     writer_pipe.close()
 
-def numb_param(params):
-    mode = os.getenv("NUMB_MODE")
-    if mode != "TRAIN":  # nop
-        print("NO OP FOR PARAM!")
-        return
-    writer_pipe = os.fdopen(PARAM_FD, 'w') # write-end of the pipe
-    writer_pipe.write(json.dumps(params))
-    writer_pipe.close()
-
 def numb_test_result(test_result: dict):
     writer_pipe = os.fdopen(TEST_RESULT_FD, "w")
     writer_pipe.write(json.dumps(test_result))
     writer_pipe.close()
 
 def numb_state_dict(model: nn.Module):
-    mode = os.getenv("NUMB_MODE")
-    if mode != "TRAIN":  # nop
-        print("NO OP FOR STATE DICT!")
-        return
+    # mode = os.getenv("NUMB_MODE")
+    # if mode != "TRAIN":  # nop
+    #     print("NO OP FOR STATE DICT!")
+    #     return
     writer_pipe = os.fdopen(STATE_DICT_FD, 'wb') # write-end of the pipe
     torch.save(model.state_dict(), writer_pipe)
     writer_pipe.close()
@@ -56,10 +72,10 @@ def numb_test_start(model: nn.Module):
     this one will block and wait for StateDictFileName
     :return:
     """
-    mode = os.getenv("NUMB_MODE")
-    if mode != "TEST":
-        print("NO OP FOR TEST!")
-        return
+    # mode = os.getenv("NUMB_MODE")
+    # if mode != "TEST":
+    #     print("NO OP FOR TEST!")
+    #     return
     def handle_usr2(*args, **kwargs): # exit on sigusr2
         print("SHUTTING DOWN")
         sys.exit(1)
@@ -78,7 +94,7 @@ def numb_model(dummy_input):
         def wrapped(*args, **kwargs):
             initfunc(*args, **kwargs)
             mode = os.getenv("NUMB_MODE")
-            if mode == "TRAIN":
+            if mode == "TRAIN" or mode == "QUEUE":
                 numb_code_snapshot(args[0])
                 numb_graph(args[0], dummy_input)
                 atexit.register(numb_state_dict, args[0])

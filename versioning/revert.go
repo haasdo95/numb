@@ -1,6 +1,7 @@
 package versioning
 
 import (
+	"os"
 	"os/exec"
 	"gopkg.in/mgo.v2/bson"
 	"fmt"
@@ -18,7 +19,13 @@ func Revert(collection *mgo.Collection, gitHash string) {
 		fmt.Println("Cannot find record")
 		return
 	}
-	exec.Command("git", "checkout", gitHash).Run()
+	cmd := exec.Command("git", "checkout", gitHash)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+	if err != nil {
+		return
+	}
 	fmt.Println("Dear User:")
 	fmt.Println("\tPlease try not to edit stuff here,")
 	fmt.Println("\tbefore I figure out how to let you do so safely.")

@@ -2,8 +2,6 @@
 package database
 
 import (
-	"time"
-
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -15,7 +13,7 @@ type Schema struct {
 	StateDictFilename string        `json:"stateDictFilename" bson:"stateDictFilename"`
 	Params            string        `json:"params" bson:"params"`
 	Test              string     `json:"test" bson:"test"`
-	Timestamp         time.Time     `json:"timestamp" bson:"timestamp"`
+	Timestamp         int64     `json:"timestamp" bson:"timestamp"`
 	Versioning        string      `json:"versioning" bson:"versioning"`
 }
 
