@@ -1,6 +1,7 @@
 package run
 
 import (
+	"strconv"
 	"github.com/olekukonko/tablewriter"
 	"bytes"
 	"fmt"
@@ -35,17 +36,34 @@ type RunMode int
 func Train(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
 	trainEnv := make(map[string]string)
 	trainEnv["NUMB_MODE"] = "TRAIN"
-	run(cmdline, trainEnv, runconfig, TRAIN, collection, "")
+	run(cmdline, trainEnv, runconfig, TRAIN, collection, "", nil)
 }
 
 // Test runs a command in train mode.
-func Test(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection) {
+func Test(cmdline string, runconfig map[string]interface{}, collection *mgo.Collection, reader io.Reader) {
 	testEnv := make(map[string]string)
 	testEnv["NUMB_MODE"] = "TEST"
-	run(cmdline, testEnv, runconfig, TEST, collection, "")
+	if reader == nil {
+		reader = os.Stdin
+	}
+	testAll, ok := runconfig["all"].(bool)
+	if !testAll || !ok {
+		run(cmdline, testEnv, runconfig, TEST, collection, "", reader)
+	} else {
+		totalTestCount := 0
+		for {
+			cnt := run(cmdline, testEnv, runconfig, TEST, collection, "", reader)
+			totalTestCount += cnt
+			if cnt == 0 {
+				fmt.Println("Done testing in chunk")
+				fmt.Printf("%d tests made in total\n", totalTestCount)
+				break
+			}
+		}
+	}
 }
 
-func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeReader *os.File, collection *mgo.Collection, queued bool) {
+func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeReader *os.File, collection *mgo.Collection, queued bool) int {
 
 	// retrieve compgraph & params
 	var concreteGraph string
@@ -77,7 +95,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 			if !yes {
 				fmt.Println("SHUTTING DOWN")
 				cmd.Process.Signal(syscall.SIGINT)
-				return
+				return 0
 			}
 		}
 	}
@@ -86,7 +104,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 
 	// retrieve state dict
 	currTime := time.Now()
-	stateDictFile, err := os.Create(".nmb/" + string(currTime.UnixNano()))
+	stateDictFile, err := os.Create(".nmb/" + strconv.FormatInt(currTime.UnixNano(), 10))
 	utils.Check(err)
 	io.Copy(stateDictFile, stateDictReader) // dump the statedict
 
@@ -96,7 +114,7 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	newEntry.ConcreteGraph = concreteGraph
 	newEntry.Code = nnCode
 	newEntry.Params = paramJSON
-	newEntry.StateDictFilename = string(currTime.UnixNano())
+	newEntry.StateDictFilename = strconv.FormatInt(currTime.UnixNano(), 10)
 	newEntry.Test = ""
 	newEntry.Timestamp = currTime.UnixNano()
 	newEntry.Versioning = ""
@@ -115,9 +133,11 @@ func runTrain(cmd *exec.Cmd, graphReader, paramReader, stateDictReader, codeRead
 	
 	err = collection.Insert(&newEntry)
 	utils.Check(err)
+	return 1
 }
 
-func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.File, sigs chan int, collection *mgo.Collection) {
+// runTest returns the number of "tasks" executed
+func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.File, sigs chan int, collection *mgo.Collection, queued bool) int {
 	// get comp graph first
 	buf := bytes.NewBuffer(nil)
 	_, err := io.Copy(buf, graphReader)
@@ -128,7 +148,7 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	if cnt, _ := query.Count(); cnt == 0 {
 		cmd.Process.Signal(syscall.SIGUSR2)
 		fmt.Println("The model you are testing doesn't even exist")
-		return
+		return 0
 	}
 	<-sigs // blocks until signal comes
 
@@ -163,17 +183,37 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	}
 	fmt.Println()
 
-	var choice = 0
-	for {
-		fmt.Print("Use parameter: ")
-		fmt.Scanln(&choice)
-		if choice >= 0 && choice < len(results) {
-			break
-		} else {
-			fmt.Println("Invalid Index! Please try again.")
+	// this function returns the index of the next untested model
+	getNextUntested := func() int {
+		for choice, result := range results {
+			if result.Test == "" {
+				return choice
+			}
 		}
+		return -1 // all are tested!
 	}
 
+	var choice = 0
+	if !queued {
+		for {
+			fmt.Print("Use parameter: ")
+			fmt.Scanln(&choice)
+			if choice >= 0 && choice < len(results) {
+				break
+			} else {
+				fmt.Println("Invalid Index! Please try again.")
+			}
+		}
+	} else { // smartly fetch next untest model
+		choice = getNextUntested()
+		if choice == -1 { // all are tested
+			fmt.Println("All parameters associated with current architecture have been tested")
+			// kill python script
+			cmd.Process.Signal(syscall.SIGUSR2)
+			return 0
+		}
+	}
+	
 	savedStatedictFilename := results[choice].StateDictFilename
 	savedStatedictFilename = ".nmb/" + savedStatedictFilename
 
@@ -187,9 +227,15 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	testResultJSON := buf.String()
 
 	fmt.Println("Received: ", testResultJSON)
+	if testResultJSON == "" {
+		fmt.Println("I bet you forget to put 'numb_test_result' at the end of your python script")
+		fmt.Println("It is needed to collect testing result")
+		fmt.Println("Put it here and re-test.")
+		return 0
+	}
 	
 	_, err = collection.UpdateAll(bson.M{
-		"concrete": concreteGraph, 
+		"concrete": results[choice].ConcreteGraph, 
 		"params": results[choice].Params,
 	}, bson.M {
 		"$set": bson.M{
@@ -199,9 +245,11 @@ func runTest(cmd *exec.Cmd, graphReader, interactWriter, testResultReader *os.Fi
 	utils.Check(err)
 
 	utils.Check(cmd.Wait())
+	return 1
 }
 
-func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, mode RunMode, collection *mgo.Collection, queueData string) {
+// run returns the number of tasks executed
+func run(cmdline string, newEnv map[string]string, runconfig map[string]interface{}, mode RunMode, collection *mgo.Collection, queueData string, reader io.Reader) int {
 	cmdPath := strings.Split(cmdline, " ")
 	cmd := exec.Command(cmdPath[0], cmdPath[1:]...)
 
@@ -294,10 +342,15 @@ func run(cmdline string, newEnv map[string]string, runconfig map[string]interfac
 		pReceiveParamR.Close()
 	}
 
+	if reader != nil {
+		cmd.Stdin = reader // inject stdin
+	}
+
 	if mode == TEST {
-		runTest(cmd, pGraphR, pInteractW, pTestResultR, sigusr1Received, collection)
+		testAll, ok := runconfig["all"].(bool)
+		return runTest(cmd, pGraphR, pInteractW, pTestResultR, sigusr1Received, collection, testAll && ok)
 	} else {
-		runTrain(cmd, pGraphR, pParamR, pStateR, pCodeR, collection, mode == QUEUE)
+		return runTrain(cmd, pGraphR, pParamR, pStateR, pCodeR, collection, mode == QUEUE)
 	}
 
 }

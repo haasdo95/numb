@@ -45,7 +45,7 @@ func QueueRun(cmdline string, runconfig map[string]interface{}, collection *mgo.
 			jb, err := json.Marshal(entry)
 			utils.Check(err)
 			js := string(jb)
-			run(cmdline, queueEnv, runconfig, QUEUE, collection, js)
+			run(cmdline, queueEnv, runconfig, QUEUE, collection, js, nil)
 		}
 	} else {
 		println("Bad Range")

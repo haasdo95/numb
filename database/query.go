@@ -6,9 +6,7 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-func GetCollection() (*mgo.Collection, *mgo.Session) {
-	session, err := mgo.Dial("127.0.0.1")
-	utils.Check(err)
+func GetCollection(session *mgo.Session) (*mgo.Collection) {
 	session.SetMode(mgo.Monotonic, true)
 	name := bootstrap.GetConfig().Name
 	collection := session.DB(name).C(name)
@@ -29,5 +27,5 @@ func GetCollection() (*mgo.Collection, *mgo.Session) {
 	}
 	utils.Check(collection.EnsureIndex(index))
 
-	return collection, session
+	return collection
 }

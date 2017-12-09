@@ -1,11 +1,13 @@
 package main
 
 import (
+	"gopkg.in/mgo.v2"
 	"flag"
 	"fmt"
 	"os"
 
 	"github.com/user/numb/run"
+	"github.com/user/numb/utils"
 	"github.com/user/numb/database"
 
 	"github.com/user/numb/bootstrap"
@@ -29,9 +31,11 @@ func main() {
 	// Parsing cmdline arguments
 	skipFirstFlagSet := flag.NewFlagSet("", flag.ExitOnError)
 	silent := skipFirstFlagSet.Bool("silent", false, "silent stdout & stderr")
+	all := skipFirstFlagSet.Bool("all", false, "test all that is untested")
 	skipFirstFlagSet.Parse(os.Args[2:])
 	var runconfig = map[string]interface{}{
 		"silent": *silent,
+		"all": *all,
 	}
 
 	subcmd := args[1] // the second
@@ -42,12 +46,14 @@ func main() {
 		bootstrap.Deinit()
 	default:
 		nmbConfig := bootstrap.GetConfig()
-		collection, session := database.GetCollection()
+		session, err := mgo.Dial("127.0.0.1")
+		utils.Check(err)
+		collection := database.GetCollection(session)
 		defer session.Close()
 		switch subcmd {
 		case "test":
 			for _, cmdline := range nmbConfig.Test {
-				run.Test(cmdline, runconfig, collection)
+				run.Test(cmdline, runconfig, collection, nil)
 			}
 		case "train":
 			for _, cmdline := range nmbConfig.Train {
