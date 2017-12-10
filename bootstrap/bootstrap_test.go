@@ -5,11 +5,11 @@ import (
 
 	"github.com/user/numb/bootstrap"
 
-	"github.com/user/numb/run"
+	"os/exec"
 )
 
 func TestInit(t *testing.T) {
-	run.Train("numb deinit", nil)
+	exec.Command("numb", "deinit").Run()
 	errdir, errjson := bootstrap.Init()
 	if errdir != nil || errjson != nil {
 		t.Error("An Error Occurred When Init")

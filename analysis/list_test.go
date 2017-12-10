@@ -1,11 +1,14 @@
 package analysis_test
 
 import (
+	"strconv"
+	"gopkg.in/mgo.v2/bson"
 	"io"
 	"bytes"
 	"github.com/user/numb/run"
 	"github.com/user/numb/analysis"
 	"github.com/user/numb/database"
+	"regexp"
 	"gopkg.in/ory-am/dockertest.v3"
 	"gopkg.in/mgo.v2"
 	"testing"
@@ -47,6 +50,11 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func maskID(benchmark string) string {
+	var regexID = regexp.MustCompile(`ID:  ([0-9]+)`)
+	return string(regexID.ReplaceAll([]byte(benchmark), []byte("")))
+}
+
 func TestList(t *testing.T) {
 	collection := database.GetCollection(db)
 	defer collection.DropCollection()
@@ -64,8 +72,10 @@ func TestList(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	io.Copy(buf, r)
 	output := buf.String()
+	output = maskID(output)
 	// test that output is the same as benchmark
 	benchmark := openBenchmark("benchmark_beforetest.txt", t)
+	benchmark = maskID(benchmark)
 	if output != benchmark {
 		t.Fatal("Doesn't match 'benchmark-before'")
 	}
@@ -88,8 +98,10 @@ func TestList(t *testing.T) {
 	buf = bytes.NewBuffer(nil)
 	io.Copy(buf, r)
 	output = buf.String()
+	output = maskID(output)
 	r.Close()
 	benchmark = openBenchmark("benchmark_aftertest.txt", t)
+	benchmark = maskID(benchmark)
 	if output != benchmark {
 		t.Fatal("Doesn't match 'benchmark-after'")
 	}
@@ -103,4 +115,28 @@ func openBenchmark(benchmarkName string, t *testing.T) string {
 	benchmarkBuffer := bytes.NewBuffer(nil)
 	io.Copy(benchmarkBuffer, benchmarkBeforeFile)
 	return benchmarkBuffer.String()
+}
+
+func TestReport(t *testing.T) {
+	collection := database.GetCollection(db)
+	defer collection.DropCollection()
+	run.QueueRun("python train.py", map[string]interface{}{}, collection, "testqueue.json")
+	run.Test("python test.py", map[string]interface{}{
+		"all": true,
+	}, collection, nil)
+	query := collection.Find(bson.M{})
+	var result database.Schema
+	query.One(&result)
+	ID := strconv.FormatInt(result.Timestamp, 10)
+	t.Log(ID)
+	wd, _ := os.Getwd()
+	t.Log(wd)
+	analysis.Report(collection, ID)
+	// test if the dir has been created
+	dirname := "report-" + ID
+	_, err := os.Stat(wd + "/" + dirname)
+	if os.IsNotExist(err) {
+		t.Fatal("Dir not created!")
+	}
+	os.RemoveAll(wd + "/" + dirname)
 }
