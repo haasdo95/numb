@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
-	err = os.Chdir("../../demo")
+	err = os.Chdir("../demo")
 	if err != nil {
 		log.Fatal(err.Error())
 	}

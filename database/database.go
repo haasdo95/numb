@@ -12,8 +12,8 @@ type Schema struct {
 	Code              string        `json:"code" bson:"code"`
 	StateDictFilename string        `json:"stateDictFilename" bson:"stateDictFilename"`
 	Params            string        `json:"params" bson:"params"`
-	Test              string     `json:"test" bson:"test"`
-	Timestamp         int64     `json:"timestamp" bson:"timestamp"`
-	Versioning        string      `json:"versioning" bson:"versioning"`
+	Test              string     	`json:"test" bson:"test"`
+	Timestamp         int64     	`json:"timestamp" bson:"timestamp"`
+	Versioning        string      	`json:"versioning" bson:"versioning"`
 }
 

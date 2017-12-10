@@ -1,6 +1,8 @@
 package versioning
 
 import (
+	"github.com/user/numb/database"
+	"strconv"
 	"os"
 	"os/exec"
 	"gopkg.in/mgo.v2/bson"
@@ -9,20 +11,33 @@ import (
 )
 
 // Revert allows you to get back to a previous stage
-func Revert(collection *mgo.Collection, gitHash string) {
-	if gitHash == "" {
+func Revert(collection *mgo.Collection, timestamp string) {
+	if timestamp == "" {
 		exec.Command("git", "checkout", "master").Run()
 		return
 	}
-	query := collection.Find(bson.M{"versioning": gitHash})
+	timestampNum, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		fmt.Println("Failed to parse input")
+		return
+	}
+	query := collection.Find(bson.M{"timestamp": timestampNum})
 	if cnt, _ := query.Count(); cnt != 1 {
 		fmt.Println("Cannot find record")
 		return
 	}
+	var result database.Schema
+	query.One(&result)
+	if result.Versioning == "" {
+		fmt.Println("This model is not versioned.")
+		fmt.Println("Probably it's generated with 'numb queue run'")
+		return
+	}
+	gitHash := result.Versioning
 	cmd := exec.Command("git", "checkout", gitHash)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return
 	}

@@ -2,6 +2,7 @@
 package analysis
 
 import (
+	"strconv"
 	"fmt"
 	"github.com/olekukonko/tablewriter"
 	"sort"
@@ -101,7 +102,7 @@ func List(collection *mgo.Collection, modes ...ListMode)  {
 		// iter through schemas(corresponding to different hypermeters used)
 		for _, schema := range entries {
 			// print id
-			fmt.Println("------ID: ", schema.Versioning, "------")
+			fmt.Println("------ID: ", strconv.FormatInt(schema.Timestamp, 10), "------")
 			// pretty print params
 			obj, err := utils.Str2Obj(schema.Params)
 			if schema.Params != "" && err == nil && obj != nil {

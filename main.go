@@ -82,6 +82,12 @@ func main() {
 			} else {
 				printUsage()
 			}
+		case "report":
+			if len(args) == 3 {
+				analysis.Report(collection, args[2])
+			} else {
+				printUsage()
+			}
 		default:
 			printUsage()
 		}
