@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"os"
 
-	"./run"
-	"./utils"
-	"./database"
+	"github.com/nasyxx/numb/run"
+	"github.com/nasyxx/numb/utils"
+	"github.com/nasyxx/numb/database"
 
-	"./bootstrap"
-	"./analysis"
-	"./versioning"
+	"github.com/nasyxx/numb/bootstrap"
+	"github.com/nasyxx/numb/analysis"
+	"github.com/nasyxx/numb/versioning"
 )
 
 func printUsage() {
