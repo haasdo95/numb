@@ -17,5 +17,10 @@ before_install:
     - cmake --build .
     - cd $HOME
 
+install:
+    - cd $HOME/gopath/src/github.com/nasyxx/numb
+    - go get -t -v ./
+    - ./numb
+
 script:
   - echo "script"
