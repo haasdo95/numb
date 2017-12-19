@@ -3,6 +3,8 @@ language: go
 notifications:
     email: false
 
+sudo: required
+
 go:
   - 1.9.2
 
