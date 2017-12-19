@@ -8,7 +8,8 @@ import (
 
 	"../utils"
 
-	"github.com/libgit2/git2go"
+	// "github.com/libgit2/git2go"
+	"gopkg.in/libgit2/git2go.v26"
 )
 
 func makeNumbSignature() *git.Signature {
