@@ -6,8 +6,5 @@ notifications:
 go:
   - 1.9.2
 
-install:
-  - echo "install"
-
 script:
   - echo "script"
