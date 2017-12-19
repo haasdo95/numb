@@ -1,4 +1,13 @@
 language: go
 
+notifications:
+    email: false
+
 go:
   - 1.9.2
+
+install:
+  - echo "install"
+
+script:
+  - echo "script"
