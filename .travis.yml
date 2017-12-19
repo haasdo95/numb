@@ -9,11 +9,12 @@ go:
 before_install:
     - wget "https://github.com/libgit2/libgit2/archive/v0.26.0.tar.gz"
     - tar -xf v0.26.0.tar.gz
-    - cd v0.26.0
-    - mkdir build && cd build
-    - cmake ..
-    - cmake --build .
-    - cd ..
+    - ls
+    # - cd v0.26.0
+    # - mkdir build && cd build
+    # - cmake ..
+    # - cmake --build .
+    # - cd ..
 
 script:
   - echo "script"
