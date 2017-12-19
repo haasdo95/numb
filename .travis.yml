@@ -13,12 +13,7 @@ before_install:
     - cd $GOPATH/src/github.com/libgit2/git2go
     - git submodule update --init
     - make install-static
-
-install:
     - cd $HOME/gopath/src/github.com/nasyxx/numb
-    - go get -d -t -v ./
-    - go build
-    - ./numb
 
 script:
   - echo "script"
