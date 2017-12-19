@@ -7,9 +7,9 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"sort"
 	"os"
-	"github.com/user/numb/database"
-	"github.com/user/numb/utils"
-	pp "github.com/user/numb/prettyprint"
+	"../database"
+	"../utils"
+	pp "../prettyprint"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/user/numb/utils"
+	"../utils"
 )
 
 func TestMap2Env(t *testing.T) {

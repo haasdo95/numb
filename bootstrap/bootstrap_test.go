@@ -3,7 +3,7 @@ package bootstrap_test
 import (
 	"testing"
 
-	"github.com/user/numb/bootstrap"
+	"../bootstrap"
 
 	"os/exec"
 )

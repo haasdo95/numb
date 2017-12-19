@@ -6,14 +6,14 @@ import (
 	"io"
 	"bytes"
 	"gopkg.in/mgo.v2/bson"
-	"github.com/user/numb/database"
+	"../database"
 	"os"
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"testing"
 	"log"
 	"gopkg.in/ory-am/dockertest.v3"
-	"github.com/user/numb/run"
+	"../run"
 	"github.com/libgit2/git2go"
 	
 )

@@ -19,10 +19,10 @@ import (
 
 	"gopkg.in/mgo.v2"
 
-	"github.com/user/numb/utils"
-	"github.com/user/numb/database"
-	"github.com/user/numb/versioning"
-	pp "github.com/user/numb/prettyprint"
+	"../utils"
+	"../database"
+	"../versioning"
+	pp "../prettyprint"
 )
 
 const (

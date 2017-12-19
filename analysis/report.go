@@ -1,14 +1,14 @@
 package analysis
 
 import (
-	"github.com/user/numb/database"
+	"../database"
 	"strconv"
 	"gopkg.in/mgo.v2/bson"
 	"os"
 	"os/exec"
 	"text/template"
 	"fmt"
-	"github.com/user/numb/utils"
+	"../utils"
 	"gopkg.in/mgo.v2"
 )
 

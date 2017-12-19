@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/user/numb/utils"
+	"../utils"
 
 	"github.com/libgit2/git2go"
 )
