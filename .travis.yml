@@ -16,13 +16,13 @@ before_install:
     - cd libgit2-0.26.0
     - mkdir build && cd build
     - cmake ..
-    - cmake --build .
-    - sudo cmake --build . --target install
+    - cmake --build . --target install
     - cd $HOME
 
 install:
     - cd $HOME/gopath/src/github.com/nasyxx/numb
-    - go get -t -v ./
+    - go get -d -t -v ./
+    - go build
     - ./numb
 
 script:
