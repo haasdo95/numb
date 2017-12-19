@@ -7,6 +7,7 @@ go:
   - 1.9.2
 
 before_install:
+    - cd $HOME
     - wget "https://github.com/libgit2/libgit2/archive/v0.26.0.tar.gz"
     - tar -xf v0.26.0.tar.gz
     - ls
@@ -14,7 +15,7 @@ before_install:
     - mkdir build && cd build
     - cmake ..
     - cmake --build .
-    - cd ..
+    - cd $HOME
 
 script:
   - echo "script"
