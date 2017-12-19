@@ -15,6 +15,7 @@ before_install:
     - mkdir build && cd build
     - cmake ..
     - cmake --build .
+    - cmake --build . --target install
     - cd $HOME
 
 install:
