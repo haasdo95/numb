@@ -9,7 +9,7 @@ import (
 	"github.com/nasyxx/numb/utils"
 
 	// "github.com/libgit2/git2go"
-	git "gopkg.in/libgit2/git2go.v25"
+	git "gopkg.in/libgit2/git2go.v26"
 )
 
 func makeNumbSignature() *git.Signature {
