@@ -17,7 +17,7 @@ before_install:
 install:
     - cd $HOME/gopath/src/github.com/haasdo95/numb
     - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/build
-    - export PATH=$PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/install:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/install/lib:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/build
+    - export PATH=$PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/include
     - go get -v -u -t github.com/haasdo95/numb
 
 script:
