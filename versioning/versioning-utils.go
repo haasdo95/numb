@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/nasyxx/numb/utils"
+	"github.com/haasdo95/numb/utils"
 
 	git "github.com/libgit2/git2go"
 	// git "gopkg.in/libgit2/git2go.v26"

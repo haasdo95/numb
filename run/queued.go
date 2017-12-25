@@ -5,7 +5,7 @@ import (
 	"os"
 	"encoding/json"
 	"gopkg.in/mgo.v2"
-	"github.com/nasyxx/numb/utils"
+	"github.com/haasdo95/numb/utils"
 )
 
 type QueueSpec struct {

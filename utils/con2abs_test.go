@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/nasyxx/numb/utils"
+	"github.com/haasdo95/numb/utils"
 )
 
 func TestCon2Abs(t *testing.T) {
