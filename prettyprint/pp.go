@@ -4,7 +4,7 @@ import (
 	"os"
 	"github.com/olekukonko/tablewriter"
 	"fmt"
-	"github.com/user/numb/utils"
+	"github.com/nasyxx/numb/utils"
 )
 
 func stringify(values []interface{}) []string {

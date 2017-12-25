@@ -1,4 +1,27 @@
 language: go
 
+notifications:
+    email: false
+
+sudo: required
+
 go:
   - 1.9.2
+
+before_install:
+    - cd $HOME
+    - wget "https://github.com/libgit2/libgit2/archive/v0.26.0.tar.gz"
+    - tar -xf v0.26.0.tar.gz
+    - ls
+    - cd libgit2-0.26.0
+    - mkdir build && cd build
+    - cmake ..
+    - cmake --build .
+    - go get -d github.com/libgit2/git2go
+    - cd $GOPATH/src/github.com/libgit2/git2go
+    - git submodule update --init
+    - make install-static
+    - cd $HOME/gopath/src/github.com/nasyxx/numb
+
+script:
+  - echo "script"

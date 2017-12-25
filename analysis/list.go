@@ -7,9 +7,9 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"sort"
 	"os"
-	"github.com/user/numb/database"
-	"github.com/user/numb/utils"
-	pp "github.com/user/numb/prettyprint"
+	"github.com/nasyxx/numb/database"
+	"github.com/nasyxx/numb/utils"
+	pp "github.com/nasyxx/numb/prettyprint"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
 )
@@ -46,7 +46,7 @@ func (modes ListModes) containMode(mode ListMode) bool {
 func List(collection *mgo.Collection, modes ...ListMode)  {
 	// process options
 	var modesList ListModes = modes
-	var isRev = modesList.containMode(REVERSE)	
+	var isRev = modesList.containMode(REVERSE)
 	scope := bson.M{}
 	if modesList.containMode(TESTED) {
 		scope = bson.M{"test": bson.M{"$ne": ""}}
@@ -111,7 +111,7 @@ func List(collection *mgo.Collection, modes ...ListMode)  {
 			} else {
 				pp.DisplayHyperParamFailure()
 			}
-			
+
 			obj, err = utils.Str2Obj(schema.Test)
 			if schema.Test != "" && err == nil && obj != nil {
 				table = pp.TablePrint(obj, tablewriter.BgYellowColor)
