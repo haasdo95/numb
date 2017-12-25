@@ -6,9 +6,10 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/user/numb/utils"
+	"github.com/nasyxx/numb/utils"
 
 	"github.com/libgit2/git2go"
+	// "gopkg.in/libgit2/git2go.v26"
 )
 
 func makeNumbSignature() *git.Signature {

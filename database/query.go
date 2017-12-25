@@ -1,8 +1,8 @@
 package database
 
 import (
-	"github.com/user/numb/bootstrap"
-	"github.com/user/numb/utils"
+	"github.com/nasyxx/numb/bootstrap"
+	"github.com/nasyxx/numb/utils"
 	"gopkg.in/mgo.v2"
 )
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/user/numb/utils"
+	"github.com/nasyxx/numb/utils"
 )
 
 func GetConfig() NmbConfig {
