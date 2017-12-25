@@ -8,8 +8,8 @@ import (
 
 	"github.com/nasyxx/numb/utils"
 
-	"github.com/libgit2/git2go"
-	// "gopkg.in/libgit2/git2go.v26"
+	// "github.com/libgit2/git2go"
+	git "gopkg.in/libgit2/git2go.v25"
 )
 
 func makeNumbSignature() *git.Signature {
