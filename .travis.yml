@@ -15,7 +15,8 @@ before_install:
     
 install:
     - cd $HOME/gopath/src/github.com/haasdo95/numb
-    - go get -u -t github.com/haasdo95/numb
+    - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2
+    - go get -v -u -t github.com/haasdo95/numb
 
 script:
   - echo "script"
