@@ -87,3 +87,33 @@ This is the command to run if you want to figure out why a specific architecture
 This command takes out the `state dictionary` associated with `<ID>` from the messy `.nmb` folder and put it in a new directory named as "report-`<ID>`"
 
 # 2. Python Hooks
+
+## `numb_model`
+
+A decorator to the neural network constructor.
+
+Basically, write `@numb_model(<dummy_input>)` above your `__init__`
+
+- What is the dummy input?
+	- A dummy input is a `Variable` with the dimension of your input. You could create it with `torch.ones()` or `torch.zeros()`
+
+- Why do we need it?
+	- I know this is a pain. But unlike TensorFlow, PyTorch adopts dynamic computation graph, which allows for easier debugging and prototyping. As a result, we need a full run through your neural net architecture to retrieve the computation graph, necessitating a dummy input.
+
+## `numb_param`
+
+Register hyperparameter combination with it.
+
+`numb_param` is a function that takes in a dictionary, which specifies the hyperparameter values.
+
+## `numb_queue`
+
+A function used to "inject" hyperparameters into your training script. 
+
+Put `numb_queue(globals())` before your hyperparams are referenced.
+
+- TODO: Why do we need to put `globals()` here?
+
+## `numb_trial_result`
+
+A function to retrieve your trial result by taking in a dictionary. 
