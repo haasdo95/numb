@@ -9,16 +9,16 @@ go:
   - 1.9.2
 
 before_install:
-    - set -ex
-    - VENDORED_PATH=vendor/libgit2
-    - cd $VENDORED_PATH && mkdir -p install/lib && mkdir -p build && cd build && cmake -DTHREADSAFE=ON -DBUILD_CLAR=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS=-fPIC -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DCMAKE_INSTALL_PREFIX=../install .. && cmake --build .
-    # - sudo apt-get install libgit2-dev
+    # - set -ex
+    # - VENDORED_PATH=vendor/libgit2
+    # - cd $VENDORED_PATH && mkdir -p install/lib && mkdir -p build && cd build && cmake -DTHREADSAFE=ON -DBUILD_CLAR=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS=-fPIC -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DCMAKE_INSTALL_PREFIX=../install .. && cmake --build .
+    - sudo apt-get install libgit2-dev
     
 install:
     - cd $HOME/gopath/src/github.com/haasdo95/numb
-    - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/build
-    - sudo ln -s $HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/include/git2 /usr/local/include/git2
-    - sudo ln -s $HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/include/git2.h /usr/local/include/git2.h
+    # - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/build
+    # - sudo ln -s $HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/include/git2 /usr/local/include/git2
+    # - sudo ln -s $HOME/gopath/src/github.com/haasdo95/numb/vendor/libgit2/include/git2.h /usr/local/include/git2.h
     - go get -v -u -t github.com/haasdo95/numb
 
 script:
