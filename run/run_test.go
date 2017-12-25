@@ -6,14 +6,14 @@ import (
 	"io"
 	"bytes"
 	"gopkg.in/mgo.v2/bson"
-	"github.com/haasdo95/numb//database"
+	"github.com/haasdo95/numb/database"
 	"os"
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"testing"
 	"log"
 	"gopkg.in/ory-am/dockertest.v3"
-	"github.com/haasdo95/numb//run"
+	"github.com/haasdo95/numb/run"
 	"github.com/libgit2/git2go"
 	
 )
@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
-	err = os.Chdir("github.com/haasdo95/numb//demo")
+	err = os.Chdir("github.com/haasdo95/numb/demo")
 	if err != nil {
 		log.Fatal(err.Error())
 	}

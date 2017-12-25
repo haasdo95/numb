@@ -1,14 +1,14 @@
 package analysis
 
 import (
-	"github.com/haasdo95/numb//database"
+	"github.com/haasdo95/numb/database"
 	"strconv"
 	"gopkg.in/mgo.v2/bson"
 	"os"
 	"os/exec"
 	"text/template"
 	"fmt"
-	"github.com/haasdo95/numb//utils"
+	"github.com/haasdo95/numb/utils"
 	"gopkg.in/mgo.v2"
 )
 
@@ -50,7 +50,7 @@ func Report(collection *mgo.Collection, timestamp string) {
 	err = os.Chdir(reportDirName)
 	utils.Check(err)
 
-	utils.Check(exec.Command("cp", "-rf", "github.com/haasdo95/numb//.nmb/" + stateDictName, "statedict.pkl").Run())
+	utils.Check(exec.Command("cp", "-rf", "github.com/haasdo95/numb/.nmb/" + stateDictName, "statedict.pkl").Run())
 
 	paramObj, err := utils.Str2Obj(result.Params)
 	utils.Check(err)

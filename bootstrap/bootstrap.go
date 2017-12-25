@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/haasdo95/numb//utils"
+	"github.com/haasdo95/numb/utils"
 )
 
 func check(err error) {

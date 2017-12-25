@@ -1,7 +1,7 @@
 package versioning
 
 import (
-	"github.com/haasdo95/numb//database"
+	"github.com/haasdo95/numb/database"
 	"strconv"
 	"os"
 	"os/exec"
